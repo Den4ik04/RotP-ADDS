@@ -1,5 +1,7 @@
 package com.rotp.adds;
 
+import com.github.standobyte.jojo.capability.entity.LivingUtilCapProvider;
+import com.github.standobyte.jojo.power.impl.stand.IStandPower;
 import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
@@ -31,9 +33,10 @@ public class RotpAdds {
     @SubscribeEvent
     public void onWorldTick(TickEvent.WorldTickEvent event) {
         if (event.phase == TickEvent.Phase.END && !event.world.isClientSide) {
-            // КРАФТ НА ЗЕМЛЕ (без изменений, проверяем предметы раз в 0.5 сек)
+            // 1. КРАФТ НА ЗЕМЛЕ (раз в 0.5 сек)
             if (event.world.getGameTime() % 10 == 0) {
-                List<ItemEntity> items = event.world.getEntitiesOfClass(ItemEntity.class, new AxisAlignedBB(0,0,0,0,0,0).inflate(256));
+                List<ItemEntity> items = event.world.getEntitiesOfClass(ItemEntity.class, 
+                        new AxisAlignedBB(-256, 0, -256, 256, 255, 256));
                 for (ItemEntity ingot : items) {
                     if (isItem(ingot, "jojo:meteoric_ingot")) {
                         processGroundCraft(ingot);
@@ -49,39 +52,55 @@ public class RotpAdds {
             PlayerEntity player = event.player;
             long time = player.level.getGameTime();
 
-            // 1. РАДАР (каждые 2 сек)
-            if (time % 40 == 0 && player.getTags().contains("has_stand")) {
-                checkProximity(player);
-            }
+            // Используем Capability из основного мода RotP для проверки Стенда
+            player.getCapability(LivingUtilCapProvider.CAPABILITY).ifPresent(cap -> {
+                IStandPower power = cap.getStandPower();
 
-            // 2. РАНДОМИЗАТОР СУДЬБЫ
-            // Делаем проверку раз в 5 минут (6000 тиков), чтобы не нагружать сервер
-            if (time % 6000 == 0) {
-                // Шанс 10% (0.1), что именно в эти 5 минут игроку выпадет стрела.
-                // В среднем это будет происходить раз в 50 минут игры, но абсолютно рандомно.
-                if (random.nextFloat() < 0.10f) {
-                    spawnDestinyArrow(player);
+                // 2. РАДАР СТЕНДЮЗЕРОВ (раз в 2 сек)
+                // hasPower() возвращает true, если у игрока есть Стенд
+                if (time % 40 == 0 && power.hasPower()) {
+                    checkProximity(player);
                 }
-            }
+
+                // 3. МЕХАНИКА СУДЬБЫ (проверка каждые 5 минут)
+                if (time % 6000 == 0) {
+                    // Шанс 10% на выпадение стрелы именно этому игроку
+                    if (random.nextFloat() < 0.10f) {
+                        spawnDestinyArrow(player);
+                    }
+                }
+            });
         }
     }
 
     private void checkProximity(PlayerEntity player) {
-        List<PlayerEntity> players = player.level.getEntitiesOfClass(PlayerEntity.class, player.getBoundingBox().inflate(100));
-        for (PlayerEntity other : players) {
-            if (other != player && other.getTags().contains("has_stand")) {
-                double dist = player.distanceTo(other);
-                if (dist > 15) {
-                    player.displayClientMessage(new StringTextComponent("Чувствуется присутствие другого Стенда...").withStyle(TextFormatting.RED), true);
-                    player.level.playSound(null, player.blockPosition(), SoundEvents.WITHER_SPAWN, SoundCategory.AMBIENT, 0.5f, 1.0f);
+        // Ищем всех игроков в радиусе 100 блоков
+        List<PlayerEntity> nearbyPlayers = player.level.getEntitiesOfClass(PlayerEntity.class, 
+                player.getBoundingBox().inflate(100));
+
+        for (PlayerEntity other : nearbyPlayers) {
+            if (other == player) continue;
+
+            // Проверяем наличие Стенда у встреченного игрока
+            other.getCapability(LivingUtilCapProvider.CAPABILITY).ifPresent(otherCap -> {
+                if (otherCap.getStandPower().hasPower()) {
+                    double dist = player.distanceTo(other);
+                    // Сообщение только если игрок не вплотную (дальше 15 блоков)
+                    if (dist > 15) {
+                        player.displayClientMessage(new StringTextComponent("Чувствуется присутствие другого Стенда...")
+                                .withStyle(TextFormatting.RED), true);
+                        player.level.playSound(null, player.blockPosition(), 
+                                SoundEvents.WITHER_SPAWN, SoundCategory.AMBIENT, 0.5f, 1.0f);
+                    }
                 }
-            }
+            });
         }
     }
 
     private void processGroundCraft(ItemEntity ingot) {
-        List<ItemEntity> nearby = ingot.level.getEntitiesOfClass(ItemEntity.class, ingot.getBoundingBox().inflate(1.5));
-        ItemEntity stick = null; 
+        List<ItemEntity> nearby = ingot.level.getEntitiesOfClass(ItemEntity.class, 
+                ingot.getBoundingBox().inflate(1.5));
+        ItemEntity stick = null;
         ItemEntity feather = null;
 
         for (ItemEntity e : nearby) {
@@ -94,17 +113,21 @@ public class RotpAdds {
             stick.getItem().shrink(1);
             feather.getItem().shrink(1);
 
-            ingot.level.playSound(null, ingot.blockPosition(), SoundEvents.LIGHTNING_BOLT_THUNDER, SoundCategory.AMBIENT, 1.0f, 1.0f);
+            ingot.level.playSound(null, ingot.blockPosition(), 
+                    SoundEvents.LIGHTNING_BOLT_THUNDER, SoundCategory.AMBIENT, 1.0f, 1.0f);
             spawnItem(ingot, "jojo:stand_arrow");
-            
+
             PlayerEntity p = ingot.level.getNearestPlayer(ingot, 5);
-            if (p != null) p.displayClientMessage(new StringTextComponent("НЕБЕСНЫЙ ДАР").withStyle(TextFormatting.GOLD, TextFormatting.BOLD), true);
+            if (p != null) p.displayClientMessage(new StringTextComponent("НЕБЕСНЫЙ ДАР")
+                    .withStyle(TextFormatting.GOLD, TextFormatting.BOLD), true);
         }
     }
 
     private void spawnDestinyArrow(PlayerEntity player) {
-        player.displayClientMessage(new StringTextComponent("Судьба настигла тебя!").withStyle(TextFormatting.DARK_RED, TextFormatting.BOLD), false);
-        player.level.playSound(null, player.blockPosition(), SoundEvents.LIGHTNING_BOLT_IMPACT, SoundCategory.AMBIENT, 1.0f, 1.0f);
+        player.displayClientMessage(new StringTextComponent("Судьба настигла тебя!")
+                .withStyle(TextFormatting.DARK_RED, TextFormatting.BOLD), false);
+        player.level.playSound(null, player.blockPosition(), 
+                SoundEvents.LIGHTNING_BOLT_IMPACT, SoundCategory.AMBIENT, 1.0f, 1.0f);
         spawnItem(player, "jojo:stand_arrow");
     }
 
