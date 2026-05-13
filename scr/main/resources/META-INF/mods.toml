@@ -1,12 +1,40 @@
 modLoader="javafml"
 loaderVersion="[36,)"
-license="All rights reserved"
+license="GNU GPL v3.0"
 
 [[mods]]
-modId="rotp_adds"
-version="1.0.0"
-displayName="RotP - Adds"
-authors="Solkree"
-description='''
-Addon for Ripples of the Past. Adds Destiny mechanics, Stand user proximity, and epic arrow crafting.
+    modId="rotp_adds"
+    version="1.0.0"
+    displayName="RotP - Adds"
+    authors="Solkree"
+    description='''
+Аддон для мода Ripples of the Past (RotP). 
+Добавляет:
+- Крафт Стрел на земле через удар метеорита.
+- Радар владельцев Стендов (100 блоков).
+- Систему Судьбы (Стрела из метеорита каждые 7 дней).
 '''
+
+# Зависимость от самого Forge
+[[dependencies.rotp_adds]]
+    modId="forge"
+    mandatory=true
+    versionRange="[36,)"
+    ordering="NONE"
+    side="BOTH"
+
+# Зависимость от Minecraft
+[[dependencies.rotp_adds]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.16.5,1.17)"
+    ordering="NONE"
+    side="BOTH"
+
+# КРИТИЧЕСКАЯ ЗАВИСИМОСТЬ: Твой мод загрузится только если есть Ripples of the Past
+[[dependencies.rotp_adds]]
+    modId="jojo"
+    mandatory=true
+    versionRange="[0,)" # Принимает любую версию RotP
+    ordering="AFTER"
+    side="BOTH"
