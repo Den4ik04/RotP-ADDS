@@ -1,0 +1,12 @@
+modLoader="javafml"
+loaderVersion="[36,)"
+license="All rights reserved"
+
+[[mods]]
+modId="rotp_adds"
+version="1.0.0"
+displayName="RotP - Adds"
+authors="Solkree"
+description='''
+Addon for Ripples of the Past. Adds Destiny mechanics, Stand user proximity, and epic arrow crafting.
+'''
