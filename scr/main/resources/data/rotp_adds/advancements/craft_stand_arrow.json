@@ -1,0 +1,13 @@
+{
+  "criteria": {
+    "crafted_arrow": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {
+        "recipe": "rotp_adds:stand_arrow"
+      }
+    }
+  },
+  "rewards": {
+    "function": "rotp_adds:craft_effects"
+  }
+}
