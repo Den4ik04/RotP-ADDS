@@ -22,10 +22,6 @@ minecraft {
             workingDirectory project.file('run')
             mods { rotp_adds { source sourceSets.main } }
         }
-        server {
-            workingDirectory project.file('run')
-            mods { rotp_adds { source sourceSets.main } }
-        }
     }
 }
 
